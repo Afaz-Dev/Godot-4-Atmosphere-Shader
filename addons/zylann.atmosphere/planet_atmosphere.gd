@@ -53,6 +53,9 @@ var _custom_shader : Shader
 
 @export var force_fullscreen := false
 
+@export var clouds_shadow_enabled : bool = false
+@export var clouds_shadow_cutoff_bias : float = 0.0
+
 var _far_mesh : BoxMesh
 var _near_mesh : QuadMesh
 var _mode := MODE_FAR
@@ -62,6 +65,8 @@ var _uses_baked_optical_depth := false
 
 var _optical_depth_baker : OpticalDepthBaker
 var _optical_depth_texture : Texture2D
+
+var _cloud_shadow_mesh_instance : MeshInstance3D
 
 # These parameters are assigned internally,
 # they don't need to be shown in the list of shader params
@@ -335,10 +340,73 @@ func _process(_delta):
 	var world_to_model_matrix := global_transform.inverse()
 	mat.set_shader_parameter(&"u_world_to_model_matrix", world_to_model_matrix)
 	
-	# TODO Expose cloud coverage rotation speed
+	var cov_rot := _get_cloud_coverage_rotation_2d()
+	mat.set_shader_parameter(&"u_cloud_coverage_rotation", cov_rot)
+	
+	_process_cloud_shadow()
+
+
+func _get_cloud_coverage_rotation_angle() -> float:
 	var time := float(Time.get_ticks_msec()) / 1000.0
-	mat.set_shader_parameter(&"u_cloud_coverage_rotation", Transform2D().rotated(
-		time * deg_to_rad(clouds_rotation_speed)))
+	return time * deg_to_rad(clouds_rotation_speed)
+
+
+func _get_cloud_coverage_rotation_2d() -> Transform2D:
+	var a := _get_cloud_coverage_rotation_angle()
+	return Transform2D().rotated(a)
+
+
+func _process_cloud_shadow() -> void:
+	var use_cloud_shadow := false
+	
+	if clouds_shadow_enabled:
+		var mat := _get_material()
+		var coverage_cubemap : Cubemap = mat.get_shader_parameter(&"u_cloud_coverage_cubemap")
+		
+		if coverage_cubemap != null:
+			use_cloud_shadow = true
+			var mi : MeshInstance3D = _cloud_shadow_mesh_instance
+			var sphere : SphereMesh
+			
+			if mi != null:
+				sphere = mi.mesh
+			else:
+				sphere = SphereMesh.new()
+				sphere.radius = _planet_radius + atmosphere_height
+				sphere.height = sphere.radius * 2.0
+				
+				const shader = preload("./shaders/clouds_shadow.gdshader")
+				var new_shadow_mat := ShaderMaterial.new()
+				new_shadow_mat.shader = shader
+				
+				mi = MeshInstance3D.new()
+				mi.mesh = sphere
+				mi.material_override = new_shadow_mat
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+				add_child(mi)
+				_cloud_shadow_mesh_instance = mi
+			
+			var cloud_top : float = mat.get_shader_parameter(&"u_cloud_top");
+			var cloud_bottom : float = mat.get_shader_parameter(&"u_cloud_bottom");
+			var cast_radius := (cloud_top + cloud_bottom) * 0.5 * atmosphere_height + _planet_radius
+			
+			if not is_equal_approx(sphere.radius, cast_radius):
+				sphere.radius = cast_radius
+			
+			var shadow_mat : ShaderMaterial = mi.material_override
+			
+			shadow_mat.set_shader_parameter(&"u_cloud_coverage_cubemap", coverage_cubemap)
+			
+			var cov_rot := _get_cloud_coverage_rotation_2d()
+			shadow_mat.set_shader_parameter(&"u_cloud_coverage_rotation", cov_rot)
+			
+			var sc_bias : float = mat.get_shader_parameter(&"u_cloud_coverage_bias")
+			shadow_mat.set_shader_parameter(&"u_bias", clouds_shadow_cutoff_bias - sc_bias)
+	
+	if not use_cloud_shadow:
+		if _cloud_shadow_mesh_instance != null:
+			_cloud_shadow_mesh_instance.queue_free()
+			_cloud_shadow_mesh_instance = null
 
 
 #static func _make_quad_mesh() -> Mesh:
