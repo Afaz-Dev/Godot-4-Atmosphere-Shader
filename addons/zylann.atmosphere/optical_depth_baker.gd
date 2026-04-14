@@ -9,10 +9,10 @@ const WhiteTexture = preload("./white.png")
 
 signal baked(texture)
 
-var _viewport : SubViewport
-var _canvas_item : Sprite2D
+var _viewport: SubViewport
+var _canvas_item: Sprite2D
 var _state := STATE_IDLE
-var _atmosphere_material : ShaderMaterial
+var _atmosphere_material: ShaderMaterial
 
 
 func _init():
@@ -34,7 +34,7 @@ func _init():
 	set_process(false)
 
 
-func request_bake(atmosphere_material : ShaderMaterial):
+func request_bake(atmosphere_material: ShaderMaterial):
 #	if is_inside_tree():
 #		_setup_bake(atmosphere_material)
 #	else:
@@ -48,7 +48,6 @@ func request_bake(atmosphere_material : ShaderMaterial):
 
 func _setup_bake(atmosphere_material):
 #	print("Setting up optical depth baking")
-	
 	var optical_depth_material = ShaderMaterial.new()
 	optical_depth_material.shader = DefaultOpticalDepthShader
 	
@@ -76,11 +75,10 @@ func _process(delta):
 		im = Image.create_from_data(
 			im.get_width(), im.get_height(), false, Image.FORMAT_RF, im.get_data())
 #		im.convert(Image.FORMAT_RGB8)
-#		im.save_png("optical_depth_debug.png")
+		# im.save_png("optical_depth_debug.png")
 		var texture := ImageTexture.create_from_image(im)
 #		print("Optical depth baked")
 		baked.emit(texture)
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		_state = STATE_IDLE
 		set_process(false)
-
