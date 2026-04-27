@@ -5,11 +5,11 @@ const NoiseCubemap = preload("../noise_cubemap.gd")
 signal save_as_image_requested(noise_cubemap)
 
 
-func _can_handle(object):
+func _can_handle(object: Object) -> bool:
 	return is_instance_of(object, NoiseCubemap)
 
 
-func _parse_begin(object) -> void:
+func _parse_begin(object: Object) -> void:
 	var button := Button.new()
 	button.text = "Bake as importable image"
 	button.tooltip_text = str(

@@ -46,7 +46,7 @@ func request_bake(atmosphere_material: ShaderMaterial) -> void:
 	set_process(true)
 
 
-func _setup_bake(atmosphere_material) -> void:
+func _setup_bake(atmosphere_material: ShaderMaterial) -> void:
 #	print("Setting up optical depth baking")
 	var optical_depth_material = ShaderMaterial.new()
 	optical_depth_material.shader = DefaultOpticalDepthShader
@@ -63,7 +63,7 @@ func _setup_bake(atmosphere_material) -> void:
 	_state = STATE_PENDING_RENDER
 
 
-func _process(delta) -> void:
+func _process(_unused_delta: float) -> void:
 #	print("_process ", Engine.get_frames_drawn())
 	if _state == STATE_REQUEST_BAKE:
 		_setup_bake(_atmosphere_material)

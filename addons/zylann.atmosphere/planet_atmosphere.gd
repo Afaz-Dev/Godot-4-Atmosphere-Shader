@@ -167,7 +167,7 @@ func _get_material() -> ShaderMaterial:
 
 
 # TODO Obsolete
-func set_shader_param(param_name: String, value) -> void:
+func set_shader_param(param_name: String, value: Variant) -> void:
 	push_warning("set_shader_param is deprecated, use set_shader_parameter")
 	set_shader_parameter(param_name, value)
 
@@ -178,7 +178,7 @@ func get_shader_param(param_name: String):
 	return get_shader_parameter(param_name)
 
 
-func set_shader_parameter(param_name: StringName, value) -> void:
+func set_shader_parameter(param_name: StringName, value: Variant) -> void:
 	_get_material().set_shader_parameter(param_name, value)
 
 
@@ -188,7 +188,7 @@ func get_shader_parameter(param_name: StringName):
 
 # Shader parameters are exposed like this so we can have more custom shaders in the future,
 # without forcing to change the node/script entirely
-func _get_property_list():
+func _get_property_list() -> Array:
 	var props := []
 	var mat := _get_material()
 	var shader_params := RenderingServer.get_shader_parameter_list(mat.shader.get_rid())
@@ -206,7 +206,7 @@ func _get_property_list():
 func _get(p_key: StringName) -> Variant:
 	var key = String(p_key)
 	if key.begins_with("shader_params/"):
-		var param_name = key.substr(len("shader_params/"))
+		var param_name := key.substr(len("shader_params/"))
 		var mat := _get_material()
 		var value = mat.get_shader_parameter(param_name)
 		if value == null:
