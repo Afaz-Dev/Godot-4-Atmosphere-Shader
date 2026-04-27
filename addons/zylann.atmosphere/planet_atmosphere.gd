@@ -13,6 +13,7 @@ const SWITCH_MARGIN_RATIO = 1.1
 const AtmosphereShader = preload("./shaders/planet_atmosphere_no_clouds.gdshader")
 const DefaultShader = AtmosphereShader
 const BlueNoiseTexture = preload("./blue_noise.png")
+const CloudShadowShader = preload("./shaders/clouds_shadow.gdshader")
 
 const OpticalDepthBaker = preload("./optical_depth_baker.gd")
 
@@ -376,9 +377,8 @@ func _process_cloud_shadow() -> void:
 			else:
 				sphere = SphereMesh.new()
 				
-				const shader = preload("./shaders/clouds_shadow.gdshader")
 				var new_shadow_mat := ShaderMaterial.new()
-				new_shadow_mat.shader = shader
+				new_shadow_mat.shader = CloudShadowShader
 				
 				mi = MeshInstance3D.new()
 				mi.mesh = sphere
