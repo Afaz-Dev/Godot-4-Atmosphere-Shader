@@ -375,8 +375,6 @@ func _process_cloud_shadow() -> void:
 				sphere = mi.mesh
 			else:
 				sphere = SphereMesh.new()
-				sphere.radius = _planet_radius + atmosphere_height
-				sphere.height = sphere.radius * 2.0
 				
 				const shader = preload("./shaders/clouds_shadow.gdshader")
 				var new_shadow_mat := ShaderMaterial.new()
@@ -395,6 +393,7 @@ func _process_cloud_shadow() -> void:
 			
 			if not is_equal_approx(sphere.radius, cast_radius):
 				sphere.radius = cast_radius
+				sphere.height = sphere.radius * 2.0
 			
 			var shadow_mat : ShaderMaterial = mi.material_override
 			
