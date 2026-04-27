@@ -86,7 +86,7 @@ const _shader_params_affecting_optical_depth = {
 }
 
 
-func _init():
+func _init() -> void:
 	var material := ShaderMaterial.new()
 	material.shader = AtmosphereShader
 	_mesh_instance = MeshInstance3D.new()
@@ -113,14 +113,14 @@ func _init():
 	material.set_shader_parameter(&"u_clip_mode", 0.0)
 
 
-func _ready():
+func _ready() -> void:
 	var mat := _get_material()
 	# Must assign those in _ready because they are set by the scene loader, after _init
 	mat.set_shader_parameter(&"u_planet_radius", _planet_radius)
 	mat.set_shader_parameter(&"u_atmosphere_height", _atmosphere_height)
 
 
-func set_custom_shader(shader: Shader):
+func set_custom_shader(shader: Shader) -> void:
 	_custom_shader = shader
 	
 	var mat := _get_material()
@@ -146,7 +146,7 @@ func set_custom_shader(shader: Shader):
 	notify_property_list_changed()
 
 
-func _request_bake_optical_depth():
+func _request_bake_optical_depth() -> void:
 	var mat := _get_material()
 	if _optical_depth_baker == null:
 		_optical_depth_baker = OpticalDepthBaker.new()
@@ -155,7 +155,7 @@ func _request_bake_optical_depth():
 	_optical_depth_baker.request_bake(mat)
 
 
-func _on_optical_depth_baked(tex: Texture2D):
+func _on_optical_depth_baked(tex: Texture2D) -> void:
 	_optical_depth_texture = tex
 	var mat := _get_material()
 	mat.set_shader_parameter(&"u_optical_depth_texture", tex)
@@ -166,7 +166,7 @@ func _get_material() -> ShaderMaterial:
 
 
 # TODO Obsolete
-func set_shader_param(param_name: String, value):
+func set_shader_param(param_name: String, value) -> void:
 	push_warning("set_shader_param is deprecated, use set_shader_parameter")
 	set_shader_parameter(param_name, value)
 
@@ -177,7 +177,7 @@ func get_shader_param(param_name: String):
 	return get_shader_parameter(param_name)
 
 
-func set_shader_parameter(param_name: StringName, value):
+func set_shader_parameter(param_name: StringName, value) -> void:
 	_get_material().set_shader_parameter(param_name, value)
 
 
@@ -232,7 +232,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 	return PackedStringArray()
 
 
-func set_planet_radius(new_radius: float):
+func set_planet_radius(new_radius: float) -> void:
 	if _planet_radius == new_radius:
 		return
 	_planet_radius = maxf(new_radius, 0.0)
@@ -243,11 +243,11 @@ func set_planet_radius(new_radius: float):
 		_request_bake_optical_depth()
 
 
-func _update_cull_margin():
+func _update_cull_margin() -> void:
 	_mesh_instance.extra_cull_margin = _planet_radius + _atmosphere_height
 
 
-func set_atmosphere_height(new_height: float):
+func set_atmosphere_height(new_height: float) -> void:
 	if _atmosphere_height == new_height:
 		return
 	_atmosphere_height = maxf(new_height, 0.0)
@@ -258,12 +258,12 @@ func set_atmosphere_height(new_height: float):
 		_request_bake_optical_depth()
 
 
-func set_sun_path(new_sun_path: NodePath):
+func set_sun_path(new_sun_path: NodePath) -> void:
 	_sun_path = new_sun_path
 	update_configuration_warnings()
 
 
-func _set_mode(mode: int):
+func _set_mode(mode: int) -> void:
 	if mode == _mode:
 		return
 	_mode = mode
@@ -287,7 +287,7 @@ func _set_mode(mode: int):
 		_mesh_instance.mesh = _far_mesh
 
 
-func _process(_delta):
+func _process(_delta) -> void:
 	var cam_pos := Vector3()
 	var cam_near := 0.1
 	

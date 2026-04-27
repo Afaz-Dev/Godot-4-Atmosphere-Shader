@@ -15,7 +15,7 @@ var _state := STATE_IDLE
 var _atmosphere_material: ShaderMaterial
 
 
-func _init():
+func _init() -> void:
 	_viewport = SubViewport.new()
 	_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_NEVER
 	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -34,7 +34,7 @@ func _init():
 	set_process(false)
 
 
-func request_bake(atmosphere_material: ShaderMaterial):
+func request_bake(atmosphere_material: ShaderMaterial) -> void:
 #	if is_inside_tree():
 #		_setup_bake(atmosphere_material)
 #	else:
@@ -46,7 +46,7 @@ func request_bake(atmosphere_material: ShaderMaterial):
 	set_process(true)
 
 
-func _setup_bake(atmosphere_material):
+func _setup_bake(atmosphere_material) -> void:
 #	print("Setting up optical depth baking")
 	var optical_depth_material = ShaderMaterial.new()
 	optical_depth_material.shader = DefaultOpticalDepthShader
@@ -63,7 +63,7 @@ func _setup_bake(atmosphere_material):
 	_state = STATE_PENDING_RENDER
 
 
-func _process(delta):
+func _process(delta) -> void:
 #	print("_process ", Engine.get_frames_drawn())
 	if _state == STATE_REQUEST_BAKE:
 		_setup_bake(_atmosphere_material)
