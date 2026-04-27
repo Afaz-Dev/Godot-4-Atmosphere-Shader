@@ -48,23 +48,23 @@ var _scale := Vector3(100, 100, 100)
 var _update_scheduled := false
 
 
-func _init():
+func _init() -> void:
 	# Hack to have it working by default when created in the inspector...
 	noise = FastNoiseLite.new()
 	_request_update()
 
 
-func _on_noise_changed():
+func _on_noise_changed() -> void:
 	_request_update()
 
 
-func _request_update():
+func _request_update() -> void:
 	if not _update_scheduled:
 		_update.call_deferred()
 		_update_scheduled = true
 
 
-func _update():
+func _update() -> void:
 	if _noise == null:
 		_update_scheduled = false
 		return
