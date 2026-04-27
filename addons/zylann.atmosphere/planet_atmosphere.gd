@@ -202,7 +202,7 @@ func _get_property_list():
 	return props
 
 
-func _get(p_key: StringName):
+func _get(p_key: StringName) -> Variant:
 	var key = String(p_key)
 	if key.begins_with("shader_params/"):
 		var param_name = key.substr(len("shader_params/"))
@@ -211,9 +211,10 @@ func _get(p_key: StringName):
 		if value == null:
 			value = RenderingServer.shader_get_parameter_default(mat.shader, param_name)
 		return value
+	return null
 
 
-func _set(p_key: StringName, value):
+func _set(p_key: StringName, value: Variant) -> bool:
 	var key = String(p_key)
 	if key.begins_with("shader_params/"):
 		var param_name := key.substr(len("shader_params/"))
@@ -221,6 +222,8 @@ func _set(p_key: StringName, value):
 		mat.set_shader_parameter(param_name, value)
 		if _uses_baked_optical_depth and _shader_params_affecting_optical_depth.has(param_name):
 			_request_bake_optical_depth()
+		return true
+	return false
 
 
 func _get_configuration_warnings() -> PackedStringArray:
