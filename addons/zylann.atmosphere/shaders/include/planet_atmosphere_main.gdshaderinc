@@ -137,12 +137,23 @@ void atmosphere_fragment(
 	// I wonder if there is a faster way to get to that distance...
 	float linear_depth = distance(cam_pos_world, pos_world);
 
+	//original from Zylann
 	// We'll evaluate the atmosphere in view space
 	vec3 ray_origin = vec3(0.0, 0.0, 0.0);
 	vec3 ray_dir = normalize(view_coords.xyz - ray_origin);
+	
+	//Afaz's modifications
+	//vec3 cam_pos = -in_v_planet_center_viewspace; // camera relative to planet
+	//vec3 ray_origin = cam_pos;
+	//vec3 ray_dir = normalize(view_coords.xyz);
 
 	float atmosphere_radius = u_planet_radius + u_atmosphere_height;
+	
+	//originat from Zylann
 	vec2 rs_atmo = ray_sphere(in_v_planet_center_viewspace, atmosphere_radius, ray_origin, ray_dir);
+	
+	//Afaz modified
+	//vec2 rs_atmo = ray_sphere(vec3(0.0), atmosphere_radius, ray_origin, ray_dir);
 
 	// TODO if we run this shader in a double-clip scenario,
 	// we have to account for the near and far clips properly, so they can be composed seamlessly
@@ -152,7 +163,10 @@ void atmosphere_fragment(
 		float t_end = max(rs_atmo.y, 0.0);
 
 		vec2 rs_ground =
+			//Zylann original
 			ray_sphere(in_v_planet_center_viewspace, u_planet_radius, ray_origin, ray_dir);
+			//Afaz modified
+			//ray_sphere(vec3(0.0), u_planet_radius, ray_origin, ray_dir);
 		float gd = 10000000.0;
 		if (rs_ground.x != rs_ground.y) {
 			gd = rs_ground.x;
@@ -161,7 +175,11 @@ void atmosphere_fragment(
 
 		t_end = min(t_end, linear_depth);
 
+		// original from Zylann
 		vec3 sun_dir = normalize(in_v_sun_center_viewspace - v_planet_center_viewspace);
+		
+		// modified by Afaz
+		//vec3 sun_dir = normalize(in_v_sun_center_viewspace - in_v_planet_center_viewspace);
 
 		// Blue noise doesn't have low-frequency patterns, it looks less "noisy"
 		// http://momentsingraphics.de/BlueNoise.html
@@ -174,16 +192,20 @@ void atmosphere_fragment(
 		vec4 atmosphere = compute_atmosphere(ray_origin, ray_dir, in_v_planet_center_viewspace,
 			t_begin, t_end, sun_dir);
 #else
-		vec4 atmosphere = compute_atmosphere_v2(ray_origin, ray_dir, in_v_planet_center_viewspace,
-			t_begin, t_end, linear_depth, sun_dir, jitter);
+		// Zylann's original
+		vec4 atmosphere = compute_atmosphere_v2(ray_origin, ray_dir, in_v_planet_center_viewspace, t_begin, t_end, linear_depth, sun_dir, jitter);
+		
+		// Afaz's modifications
+		//vec4 atmosphere = compute_atmosphere_v2(ray_origin, ray_dir, vec3(0.0), t_begin, t_end, linear_depth, sun_dir, jitter);
 #endif
 
 		out_albedo = atmosphere.rgb;
 		out_alpha = atmosphere.a;
 
 #ifdef CLOUDS_ENABLED
-		render_clouds(out_albedo, out_alpha, in_v_planet_center_viewspace, ray_origin, ray_dir,
-			linear_depth, inv_view_matrix, sun_dir, jitter);
+		// Zylann original
+		render_clouds(out_albedo, out_alpha, in_v_planet_center_viewspace, ray_origin, ray_dir, linear_depth, inv_view_matrix, sun_dir, jitter);
+		//render_clouds(out_albedo, out_alpha, vec3(0.0), ray_origin, ray_dir, linear_depth, inv_view_matrix, sun_dir, jitter);
 #endif // CLOUDS_ENABLED
 
 		out_discard = false;
