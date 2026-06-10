@@ -15,6 +15,12 @@ uniform float u_cloud_shape_scale = 1.0;
 uniform samplerCube u_cloud_coverage_cubemap;
 uniform mat2 u_cloud_coverage_rotation;
 
+// Terminator effect uniforms
+uniform float u_terminator_intensity = 0.8;
+uniform vec3 u_terminator_color_day = vec3(1.0, 0.5, 0.2);
+uniform vec3 u_terminator_color_night = vec3(1.0, 0.6, 0.3);
+uniform float u_terminator_width = 0.125;
+
 struct CloudSettings {
 	float bottom_height;
 	float top_height;
@@ -28,6 +34,13 @@ float height_curve(float x) {
 	return 1.0 - pow2(2.0 * x - 1.0);
 }
 
+float get_terminator_factor(vec3 pos, vec3 sun_dir) {
+	float ndotl = dot(normalize(pos), sun_dir);
+	float half_width = u_terminator_width * 0.5;
+	return smoothstep(-half_width, half_width, ndotl) * 
+		   (1.0 - smoothstep(0.0, half_width * 2.0, ndotl));
+}
+
 float get_density_full(vec3 pos_world, float time, CloudSettings settings, bool low) {
 #ifdef CLOUDS_ALWAYS_LOW_QUALITY
 	low = true;
@@ -36,7 +49,7 @@ float get_density_full(vec3 pos_world, float time, CloudSettings settings, bool 
 	float height = length(pos_world) - settings.bottom_height;
 	float height_ratio = height / (settings.top_height - settings.bottom_height);
 
-	float height_curve = max(height_curve(height_ratio), 0.0);
+	float height_curve_val = max(height_curve(height_ratio), 0.0);
 	float density = 1.0;
 
 	//float coverage = texture(u_cloud_shape_texture, pos_world * 0.2 + vec3(time * 0.001)).r;
@@ -58,7 +71,7 @@ float get_density_full(vec3 pos_world, float time, CloudSettings settings, bool 
 		shape = 1.0 - shape;
 	}
 
-	density = (shape - 0.2 * detail + (mix(-1.2, 1.5, coverage))) * height_curve;
+	density = (shape - 0.2 * detail + (mix(-1.2, 1.5, coverage))) * height_curve_val;
 	density = density * 50.0 - 20.0;
 
 	density = clamp(density, 0.0, 1.0);
@@ -84,8 +97,8 @@ float get_planet_shadow(vec3 pos, float planet_radius, vec3 sun_dir) {
 //	float shadow = min((1.0+shadow_sharpness) * (rs.y - rs.x) / (2.0 * planet_radius), 1.0);
 
 //	float dp = clamp(dot(normalize(pos), -sun_dir) + 0.6, 0.0, 1.0);
-	float dp = smoothstep(-0.3, 0.3, dot(normalize(pos), -sun_dir));
 
+	float dp = smoothstep(-0.5, 0.1, dot(normalize(pos), -sun_dir));
 	return dp;
 }
 
@@ -152,6 +165,7 @@ float get_light_raymarched(vec3 pos0, vec3 sun_dir, float jitter, float alpha0,
 
 float get_light(vec3 pos, vec3 ray_dir, vec3 sun_dir, float jitter, float alpha, float time,
 	CloudSettings settings) {
+	CloudSettings settings, out vec3 terminator_color) {
 
 #ifdef CLOUDS_RAYMARCHED_LIGHTING
 	float light = get_light_raymarched(pos, sun_dir, jitter, alpha, time, settings);
@@ -162,7 +176,17 @@ float get_light(vec3 pos, vec3 ray_dir, vec3 sun_dir, float jitter, float alpha,
 	float shadow_amount = get_planet_shadow(pos, 1.0, sun_dir);
 
 	light = light * mix(1.0, 0.002, shadow_amount);
-
+	
+	// Calculate terminator effect
+	float terminator = get_terminator_factor(pos, sun_dir);
+	
+	// Determine which side of terminator
+	float side = step(0.0, dot(normalize(pos), sun_dir));
+	vec3 warm_color = mix(u_terminator_color_night, u_terminator_color_day, side);
+	
+	// Apply terminator glow
+	terminator_color = warm_color * terminator * u_terminator_intensity;
+	
 	return light;
 }
 
@@ -173,7 +197,7 @@ float get_light(vec3 pos, vec3 ray_dir, vec3 sun_dir, float jitter, float alpha,
 #endif
 
 vec2 raymarch_cloud(vec3 ray_origin, vec3 ray_dir, float t_begin, float t_end, float jitter,
-	vec3 sun_dir, float time, CloudSettings settings) {
+	vec3 sun_dir, float time, CloudSettings settings, out vec3 out_terminator_glow) {
 	
 	const int steps = CLOUDS_MAX_RAYMARCH_STEPS;
 //	int steps = min(int((t_end - t_begin) / 0.005) + 1, CLOUDS_MAX_RAYMARCH_STEPS);
@@ -211,9 +235,12 @@ vec2 raymarch_cloud(vec3 ray_origin, vec3 ray_dir, float t_begin, float t_end, f
 	float total_light = 0.0;
 	float alpha = 0.0;
 	vec3 pos = ray_origin + jitter * step_len * ray_dir + ray_dir * t_begin;
+	
+	vec3 accumulated_terminator = vec3(0.0);
 
 	for (int i = 0; i < steps; ++i) {
-		float light = get_light(pos, ray_dir, sun_dir, jitter, alpha, time, settings);
+		vec3 terminator_color;
+		float light = get_light(pos, ray_dir, sun_dir, jitter, alpha, time, settings, terminator_color);
 		float density = get_density(pos, time, settings);
 
 		density *= settings.density_scale;
@@ -224,6 +251,7 @@ vec2 raymarch_cloud(vec3 ray_origin, vec3 ray_dir, float t_begin, float t_end, f
 
 //		total_light += total_transmittance * light;
 		total_light += light * density * step_len * total_transmittance;
+		accumulated_terminator += terminator_color * density * step_len * total_transmittance;
 
 		alpha += (1.0 - transmittance) * (1.0 - alpha);
 
@@ -240,6 +268,8 @@ vec2 raymarch_cloud(vec3 ray_origin, vec3 ray_dir, float t_begin, float t_end, f
 //	coverage = clamp((coverage + u_cloud_coverage_bias - 0.5) * 4.0, 0.0, 1.0);
 //	total_light = 1.0;
 //	alpha += coverage * (1.0 - alpha);
+	
+	out_terminator_glow = accumulated_terminator;
 
 	return vec2(total_light, alpha);
 //	return vec2(total_transmittance, clamp(total_light, 0.0, 1.0));
@@ -293,12 +323,16 @@ void render_clouds(
 			cloud_settings.density_scale = u_cloud_density_scale;
 			cloud_settings.ground_height = u_planet_radius;
 
+			vec3 terminator_glow;
 			vec2 cloud_rr = raymarch_cloud(
 				ray_origin_world, ray_dir_world, cloud_rs.x, cloud_rs.y, jitter, sun_dir_world,
-				TIME, cloud_settings);
+				TIME, cloud_settings, terminator_glow);
 			
 			vec3 cloud_albedo = vec3(cloud_rr.x);
 			float cloud_alpha = cloud_rr.y;
+
+			// Add terminator glow to clouds
+			cloud_albedo += terminator_glow * 0.8;
 
 			vec4 alpha_blended = blend_colors(
 				vec4(out_albedo, out_alpha),

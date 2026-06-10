@@ -3,7 +3,7 @@ render_mode unshaded;//, depth_draw_alpha_prepass;
 
 #define CLOUDS_ENABLED
 #define CLOUDS_MAX_RAYMARCH_STEPS 64
-#define ATMOSPHERE_RAYMARCH_STEPS 8
+#define ATMOSPHERE_RAYMARCH_STEPS 16 //originally 8 but i increased it (Afaz)
 #include "include/planet_atmosphere_main.gdshaderinc"
 
 uniform sampler2D u_depth_texture : hint_depth_texture;
