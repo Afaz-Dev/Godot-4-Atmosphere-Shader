@@ -5,11 +5,13 @@
 #include "util.gdshaderinc"
 
 uniform sampler2D u_optical_depth_texture : repeat_disable;
-uniform float u_scattering_strength = 20.0;
+uniform float u_scattering_strength = 30.0;
 uniform vec3 u_scattering_wavelengths = vec3(700.0, 530.0, 440.0);
 uniform vec3 u_atmosphere_modulate : source_color = vec3(1.0);
 uniform vec3 u_atmosphere_ambient_color : source_color = vec3(0.0, 0.0, 0.002);
 
+//Afaz's
+uniform float u_horizon_boost = 1.7;
 
 float get_baked_optical_depth(
 	vec3 pos,
@@ -17,7 +19,8 @@ float get_baked_optical_depth(
 	vec3 planet_center,
 	sampler2D optical_depth_texture,
 ) {
-	float height = distance(pos, planet_center) - u_planet_radius;
+	float height = distance(pos, planet_center) - u_planet_radius; //Zylann original
+	//float height = length(pos) - u_planet_radius; Afaz modified
 	float height_ratio = clamp(height / u_atmosphere_height, 0.0, 1.0);
 	vec3 up = normalize(pos - planet_center);
 	float uvx = 0.5 + 0.5 * dot(up, dir);
@@ -32,7 +35,7 @@ float get_baked_optical_depth(
 vec4 compute_atmosphere_v2(
 	vec3 ray_origin,
 	vec3 ray_dir,
-	vec3 planet_center,
+	vec3 planet_center, // with afaz's modification, it will now always be vec3(0)
 	float t_begin,
 	float t_end,
 	float linear_depth,
@@ -61,7 +64,8 @@ vec4 compute_atmosphere_v2(
 		float sun_ray_optical_depth =
 			get_baked_optical_depth(pos, sun_dir, planet_center, u_optical_depth_texture);
 
-		float height = distance(pos, planet_center);
+		float height = distance(pos, planet_center); //Zylann original
+		//float height = length(pos) Afaz modified
 		float local_density = get_atmosphere_density(height) * u_density;
 		view_ray_optical_depth += local_density * step_len;
 //		view_ray_optical_depth =
@@ -71,8 +75,26 @@ vec4 compute_atmosphere_v2(
 		vec3 transmittance = exp(
 			-(sun_ray_optical_depth + view_ray_optical_depth)
 			* scattering_coefficients);
-
-		total_light += local_density * step_len * transmittance * scattering_coefficients;
+		
+		
+		// Some modifications (By Afaz)
+		// the goal here is to increase the terminator's scatter
+		float mu = dot(ray_dir, sun_dir);
+		
+		// Shift terminator slightly
+		mu = mu * 0.9 + 0.1;
+		
+		// Horizon boost (this is where i widen the terminator)
+		float horizon = u_horizon_boost - abs(mu);
+		
+		// Smooth shaping (for stability into Godot 4 HDR)
+		horizon = pow(horizon, 2.5);
+		
+		// Add controlled boost
+		float phase_boost = 1.0 + horizon * 2.5;
+		
+		total_light += local_density * step_len * transmittance * scattering_coefficients * phase_boost;
+		// end of modifications
 
 		// Alpha depends on the amount of stuff the ray goes through
 		float vtransmittance = exp(-local_density * step_len);
