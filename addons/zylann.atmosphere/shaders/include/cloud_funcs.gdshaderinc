@@ -164,7 +164,6 @@ float get_light_raymarched(vec3 pos0, vec3 sun_dir, float jitter, float alpha0,
 }
 
 float get_light(vec3 pos, vec3 ray_dir, vec3 sun_dir, float jitter, float alpha, float time,
-	CloudSettings settings) {
 	CloudSettings settings, out vec3 terminator_color) {
 
 #ifdef CLOUDS_RAYMARCHED_LIGHTING
